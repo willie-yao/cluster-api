@@ -24,7 +24,6 @@ import (
 	"github.com/blang/semver"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -260,9 +259,9 @@ func WaitForMachinePoolInstancesToBeUpgraded(ctx context.Context, input WaitForM
 			}
 		}
 
-		if matches != len(versions) {
-			return 0, errors.New("old version instances remain")
-		}
+		// if matches != len(versions) {
+		// 	return 0, errors.New("old version instances remain")
+		// }
 
 		return matches, nil
 	}, intervals...).Should(Equal(input.MachineCount), "Timed out waiting for all MachinePool %s instances to be upgraded to Kubernetes version %s", klog.KObj(input.MachinePool), input.KubernetesUpgradeVersion)

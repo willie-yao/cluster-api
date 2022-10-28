@@ -237,6 +237,7 @@ func WaitForMachinePoolInstancesToBeUpgraded(ctx context.Context, input WaitForM
 	Expect(input.MachineCount).To(BeNumerically(">", 0), "Invalid argument. input.MachineCount can't be smaller than 1 when calling WaitForMachinePoolInstancesToBeUpgraded")
 
 	log.Logf("Ensuring all MachinePool Instances have upgraded kubernetes version %s", input.KubernetesUpgradeVersion)
+	log.Logf("Intervals for WaitForMachinePoolInstancesToBeUpgraded: %v", intervals)
 	Eventually(func() (int, error) {
 		nn := client.ObjectKey{
 			Namespace: input.MachinePool.Namespace,

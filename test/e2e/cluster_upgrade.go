@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -80,6 +81,9 @@ func ClusterUpgradeConformanceSpec(ctx context.Context, inputGetter func() Clust
 		clusterResources       *clusterctl.ApplyClusterTemplateAndWaitResult
 		kubetestConfigFilePath string
 	)
+
+	SetDefaultEventuallyTimeout(15 * time.Minute)
+	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
 	BeforeEach(func() {
 		Expect(ctx).NotTo(BeNil(), "ctx is required for %s spec", specName)

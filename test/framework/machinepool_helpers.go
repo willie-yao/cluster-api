@@ -18,6 +18,7 @@ package framework
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -260,9 +261,9 @@ func WaitForMachinePoolInstancesToBeUpgraded(ctx context.Context, input WaitForM
 		}
 
 		log.Logf("Test log statement")
-		// if matches != len(versions) {
-		// 	return 0, errors.New("old version instances remain")
-		// }
+		if matches != len(versions) {
+			return 0, errors.New("old version instances remain")
+		}
 
 		return matches, nil
 	}, intervals...).Should(Equal(input.MachineCount))

@@ -2,36 +2,42 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: ClusterClass
 metadata:
   name: quick-start
+  namespace: default
 spec:
   controlPlane:
     ref:
       apiVersion: controlplane.cluster.x-k8s.io/v1beta1
       kind: KubeadmControlPlaneTemplate
       name: quick-start-control-plane
+      namespace: default
     machineInfrastructure:
       ref:
         kind: DockerMachineTemplate
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         name: quick-start-control-plane
+        namespace: default
   infrastructure:
     ref:
       apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
       kind: DockerClusterTemplate
       name: quick-start-cluster
+      namespace: default
   workers:
-    machineDeployments:
-    - class: default-worker
+    machinePools:
+    - class: default-mp
       template:
         bootstrap:
           ref:
             apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
-            kind: KubeadmConfigTemplate
-            name: quick-start-default-worker-bootstraptemplate
+            kind: KubeadmConfig
+            name: worker-mp-0-config
+            namespace: default
         infrastructure:
           ref:
             apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-            kind: DockerMachineTemplate
-            name: quick-start-default-worker-machinetemplate
+            kind: DockerMachinePool
+            name: worker-dmp-0
+            namespace: default
   variables:
   - name: imageRepository
     required: true
@@ -201,6 +207,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: DockerClusterTemplate
 metadata:
   name: quick-start-cluster
+  namespace: default
 spec:
   template:
     spec: {}
@@ -209,6 +216,7 @@ kind: KubeadmControlPlaneTemplate
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
 metadata:
   name: quick-start-control-plane
+  namespace: default
 spec:
   template:
     spec:
@@ -228,6 +236,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: DockerMachineTemplate
 metadata:
   name: quick-start-control-plane
+  namespace: default
 spec:
   template:
     spec:
@@ -238,6 +247,7 @@ spec:
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: DockerMachineTemplate
 metadata:
+  namespace: default
   name: quick-start-default-worker-machinetemplate
 spec:
   template:
@@ -246,12 +256,19 @@ spec:
       - containerPath: "/var/run/docker.sock"
         hostPath: "/var/run/docker.sock"
 ---
-apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
-kind: KubeadmConfigTemplate
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: DockerMachinePool
 metadata:
-  name: quick-start-default-worker-bootstraptemplate
+  name: worker-dmp-0
+  namespace: default
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfig
+metadata:
+  name: worker-mp-0-config
+  namespace: default
 spec:
-  template:
-    spec:
-      joinConfiguration:
-        nodeRegistration: {} # node registration parameters are automatically injected by CAPD according to the kindest/node image in use.
+  joinConfiguration:
+    nodeRegistration:
+      kubeletExtraArgs:
+        eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%

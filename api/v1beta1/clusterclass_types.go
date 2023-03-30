@@ -157,7 +157,7 @@ type MachineDeploymentClass struct {
 	MachineHealthCheck *MachineHealthCheckClass `json:"machineHealthCheck,omitempty"`
 
 	// FailureDomain is the failure domain the machines will be created in.
-	// Must match a key in the FailureDomains map stored on the cluster object.
+	// Must match a key in the FailureDomain map stored on the cluster object.
 	// NOTE: This value can be overridden while defining a Cluster.Topology using this MachineDeploymentClass.
 	// +optional
 	FailureDomain *string `json:"failureDomain,omitempty"`
@@ -261,11 +261,11 @@ type MachinePoolClass struct {
 	// MachinePools objects representing a pool of worker nodes.
 	Template MachinePoolClassTemplate `json:"template"`
 
-	// FailureDomains is the list of failure domains the MachinePool should be attached to.
-	// Must match a key in the FailureDomains map stored on the cluster object.
+	// FailureDomain is the failure domain the machine pools will be created in.
+	// Must match a key in the FailureDomain map stored on the cluster object.
 	// NOTE: This value can be overridden while defining a Cluster.Topology using this MachinePoolClass.
 	// +optional
-	FailureDomains []string `json:"failureDomains,omitempty"`
+	FailureDomain *string `json:"failureDomain,omitempty"`
 
 	// NodeDrainTimeout is the total amount of time that the controller will spend on draining a node.
 	// The default value is 0, meaning that the node can be drained without any time limitations.

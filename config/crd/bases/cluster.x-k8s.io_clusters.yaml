@@ -1403,14 +1403,11 @@ spec:
                                 ClusterClass object mentioned in the `Cluster.Spec.Class`
                                 field.
                               type: string
-                            failureDomains:
-                              description: FailureDomains is the list of failure domains
-                                the machine pool will be created in. Must match a
-                                key in the FailureDomains map stored on the cluster
-                                object.
-                              items:
-                                type: string
-                              type: array
+                            failureDomain:
+                              description: FailureDomain is the failure domain the
+                                machine pools will be created in. Must match a key
+                                in the FailureDomain map stored on the cluster object.
+                              type: string
                             metadata:
                               description: Metadata is the metadata applied to the
                                 MachinePool. At runtime this metadata is merged with

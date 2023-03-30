@@ -1394,10 +1394,10 @@ func (in *MachineList) DeepCopyObject() runtime.Object {
 func (in *MachinePoolClass) DeepCopyInto(out *MachinePoolClass) {
 	*out = *in
 	in.Template.DeepCopyInto(&out.Template)
-	if in.FailureDomains != nil {
-		in, out := &in.FailureDomains, &out.FailureDomains
-		*out = make([]string, len(*in))
-		copy(*out, *in)
+	if in.FailureDomain != nil {
+		in, out := &in.FailureDomain, &out.FailureDomain
+		*out = new(string)
+		**out = **in
 	}
 	if in.NodeDrainTimeout != nil {
 		in, out := &in.NodeDrainTimeout, &out.NodeDrainTimeout
@@ -1453,10 +1453,10 @@ func (in *MachinePoolClassTemplate) DeepCopy() *MachinePoolClassTemplate {
 func (in *MachinePoolTopology) DeepCopyInto(out *MachinePoolTopology) {
 	*out = *in
 	in.Metadata.DeepCopyInto(&out.Metadata)
-	if in.FailureDomains != nil {
-		in, out := &in.FailureDomains, &out.FailureDomains
-		*out = make([]string, len(*in))
-		copy(*out, *in)
+	if in.FailureDomain != nil {
+		in, out := &in.FailureDomain, &out.FailureDomain
+		*out = new(string)
+		**out = **in
 	}
 	if in.NodeDrainTimeout != nil {
 		in, out := &in.NodeDrainTimeout, &out.NodeDrainTimeout

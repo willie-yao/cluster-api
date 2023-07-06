@@ -768,7 +768,7 @@ func (r *Reconciler) createMachinePool(ctx context.Context, cluster *clusterv1.C
 	log := tlog.LoggerFrom(ctx).WithMachinePool(mp.Object)
 
 	infraCtx, _ := log.WithObject(mp.InfrastructureMachineTemplate).Into(ctx)
-	if err := r.reconcileReferencedTemplate(infraCtx, reconcileReferencedTemplateInput{
+	if err := r.reconcileReferencedObject(infraCtx, reconcileReferencedObjectInput{
 		cluster: cluster,
 		desired: mp.InfrastructureMachineTemplate,
 	}); err != nil {
@@ -790,7 +790,6 @@ func (r *Reconciler) createMachinePool(ctx context.Context, cluster *clusterv1.C
 		return createErrorWithoutObjectName(ctx, err, mp.Object)
 	}
 	if err := helper.Patch(ctx); err != nil {
-		log.Infof("EEEE: Failed to create MachinePool")
 		return createErrorWithoutObjectName(ctx, err, mp.Object)
 	}
 	r.recorder.Eventf(cluster, corev1.EventTypeNormal, createEventReason, "Created %q", tlog.KObj{Obj: mp.Object})
@@ -803,13 +802,11 @@ func (r *Reconciler) updateMachinePool(ctx context.Context, cluster *clusterv1.C
 	log := tlog.LoggerFrom(ctx).WithMachinePool(desiredMP.Object)
 
 	infraCtx, _ := log.WithObject(desiredMP.InfrastructureMachineTemplate).Into(ctx)
-	if err := r.reconcileReferencedTemplate(infraCtx, reconcileReferencedTemplateInput{
-		cluster:              cluster,
-		ref:                  &desiredMP.Object.Spec.Template.Spec.InfrastructureRef,
-		current:              currentMP.InfrastructureMachineTemplate,
-		desired:              desiredMP.InfrastructureMachineTemplate,
-		templateNamePrefix:   infrastructureMachineTemplateNamePrefix(cluster.Name, mpTopologyName),
-		compatibilityChecker: check.ObjectsAreCompatible,
+	if err := r.reconcileReferencedObject(infraCtx, reconcileReferencedObjectInput{
+		cluster:       cluster,
+		current:       currentMP.InfrastructureMachineTemplate,
+		desired:       desiredMP.InfrastructureMachineTemplate,
+		versionGetter: contract.ControlPlane().Version().Get,
 	}); err != nil {
 		return errors.Wrapf(err, "failed to reconcile %s", tlog.KObj{Obj: currentMP.Object})
 	}

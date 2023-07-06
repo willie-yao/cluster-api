@@ -604,7 +604,7 @@ func updateDesiredState(ctx context.Context, req *runtimehooksv1.GeneratePatches
 		if err != nil {
 			return err
 		}
-		if err := patchTemplate(ctx, mp.InfrastructureMachineTemplate, infrastructureMachineTemplate); err != nil {
+		if err := patchObject(ctx, mp.InfrastructureMachineTemplate, infrastructureMachineTemplate); err != nil {
 			return err
 		}
 	}

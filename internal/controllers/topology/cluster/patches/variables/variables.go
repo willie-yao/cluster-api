@@ -363,7 +363,7 @@ func MachineDeployment(mdTopology *clusterv1.MachineDeploymentTopology, md *clus
 }
 
 // MachinePool returns variables that apply to templates belonging to a MachinePool.
-func MachinePool(mpTopology *clusterv1.MachinePoolTopology, mp *expv1.MachinePool, mpBootstrapTemplate, mpInfrastructureMachineTemplate *unstructured.Unstructured, definitionFrom string, patchVariableDefinitions map[string]bool) ([]runtimehooksv1.Variable, error) {
+func MachinePool(mpTopology *clusterv1.MachinePoolTopology, mp *expv1.MachinePool, mpBootstrapObject, mpInfrastructureMachineTemplate *unstructured.Unstructured, definitionFrom string, patchVariableDefinitions map[string]bool) ([]runtimehooksv1.Variable, error) {
 	variables := []runtimehooksv1.Variable{}
 
 	// Add variables overrides for the MachinePool.
@@ -392,10 +392,10 @@ func MachinePool(mpTopology *clusterv1.MachinePoolTopology, mp *expv1.MachinePoo
 		builtin.MachinePool.Replicas = pointer.Int64(int64(*mp.Spec.Replicas))
 	}
 
-	if mpBootstrapTemplate != nil {
+	if mpBootstrapObject != nil {
 		builtin.MachinePool.Bootstrap = &MachineBootstrapBuiltins{
 			ConfigRef: &MachineBootstrapConfigRefBuiltins{
-				Name: mpBootstrapTemplate.GetName(),
+				Name: mpBootstrapObject.GetName(),
 			},
 		}
 	}

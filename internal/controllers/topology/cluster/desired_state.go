@@ -954,17 +954,16 @@ func computeMachinePool(_ context.Context, s *scope.Scope, desiredControlPlaneSt
 	if currentMachinePool != nil && currentMachinePool.InfrastructureMachineTemplate != nil {
 		currentInfraMachineTemplateRef = &currentMachinePool.Object.Spec.Template.Spec.InfrastructureRef
 	}
-	desiredMachinePool.InfrastructureMachineTemplate = templateToTemplate(templateToInput{
+	desiredMachinePool.InfrastructureMachineTemplate, err = templateToObject(templateToInput{
 		template:              machinePoolBlueprint.InfrastructureMachineTemplate,
 		templateClonedFromRef: contract.ObjToRef(machinePoolBlueprint.InfrastructureMachineTemplate),
 		cluster:               s.Current.Cluster,
 		namePrefix:            infrastructureMachineTemplateNamePrefix(s.Current.Cluster.Name, machinePoolTopology.Name),
 		currentObjectRef:      currentInfraMachineTemplateRef,
-		// Note: we are adding an ownerRef to Cluster so the template will be automatically garbage collected
-		// in case of errors in between creating this template and creating/updating the MachinePool object
-		// with the reference to the ControlPlane object using this template.
-		ownerRef: ownerReferenceTo(s.Current.Cluster),
 	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compute infrastructure template for topology %q", machinePoolTopology.Name)
+	}
 
 	infraMachineTemplateLabels := desiredMachinePool.InfrastructureMachineTemplate.GetLabels()
 	if infraMachineTemplateLabels == nil {

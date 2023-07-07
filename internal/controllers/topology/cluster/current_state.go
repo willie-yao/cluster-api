@@ -362,22 +362,22 @@ func (r *Reconciler) getCurrentMachinePoolState(ctx context.Context, blueprintMa
 			return nil, fmt.Errorf("BootstrapTemplate object %s referenced from MD %s is not topology owned", tlog.KObj{Obj: bootstrapObject}, tlog.KObj{Obj: m})
 		}
 
-		// Get the InfraMachineTemplate.
-		infraMachineTemplate, err := r.getReference(ctx, infraRef)
+		// Get the InfraMachinePoolObject.
+		infraMachinePoolObject, err := r.getReference(ctx, infraRef)
 		if err != nil {
 			return nil, errors.Wrap(err, fmt.Sprintf("%s Infrastructure reference could not be retrieved", tlog.KObj{Obj: m}))
 		}
 		// check that the referenced object has the ClusterTopologyOwnedLabel label.
 		// Nb. This is to make sure that a managed topology cluster does not have a reference to an object that is not
 		// owned by the topology.
-		if !labels.IsTopologyOwned(infraMachineTemplate) {
-			return nil, fmt.Errorf("InfrastructureMachineTemplate object %s referenced from MD %s is not topology owned", tlog.KObj{Obj: infraMachineTemplate}, tlog.KObj{Obj: m})
+		if !labels.IsTopologyOwned(infraMachinePoolObject) {
+			return nil, fmt.Errorf("InfrastructureMachineTemplate object %s referenced from MD %s is not topology owned", tlog.KObj{Obj: infraMachinePoolObject}, tlog.KObj{Obj: m})
 		}
 
 		state[mpTopologyName] = &scope.MachinePoolState{
-			Object:                        m,
-			BootstrapObject:               bootstrapObject,
-			InfrastructureMachineTemplate: infraMachineTemplate,
+			Object:                          m,
+			BootstrapObject:                 bootstrapObject,
+			InfrastructureMachinePoolObject: infraMachinePoolObject,
 		}
 	}
 	return state, nil

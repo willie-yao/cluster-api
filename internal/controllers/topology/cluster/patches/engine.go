@@ -233,7 +233,7 @@ func addVariablesForPatch(blueprint *scope.ClusterBlueprint, desired *scope.Clus
 			}
 
 			// Calculate MachinePool variables.
-			mpVariables, err := variables.MachinePool(mpTopology, mp.Object, mp.BootstrapObject, mp.InfrastructureMachineTemplate, definitionFrom, patchVariableDefinitions)
+			mpVariables, err := variables.MachinePool(mpTopology, mp.Object, mp.BootstrapObject, mp.InfrastructureMachinePoolObject, definitionFrom, patchVariableDefinitions)
 			if err != nil {
 				return errors.Wrapf(err, "failed to calculate variables for %s", klog.KObj(mp.Object))
 			}
@@ -604,7 +604,7 @@ func updateDesiredState(ctx context.Context, req *runtimehooksv1.GeneratePatches
 		if err != nil {
 			return err
 		}
-		if err := patchObject(ctx, mp.InfrastructureMachineTemplate, infrastructureMachineTemplate); err != nil {
+		if err := patchObject(ctx, mp.InfrastructureMachinePoolObject, infrastructureMachineTemplate); err != nil {
 			return err
 		}
 	}

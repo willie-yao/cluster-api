@@ -167,7 +167,8 @@ func validateSelectors(selector clusterv1.PatchSelector, class *clusterv1.Cluste
 
 	// Return an error if none of the possible selectors are enabled.
 	if !(selector.MatchResources.InfrastructureCluster || selector.MatchResources.ControlPlane ||
-		(selector.MatchResources.MachineDeploymentClass != nil && len(selector.MatchResources.MachineDeploymentClass.Names) > 0)) {
+		(selector.MatchResources.MachineDeploymentClass != nil && len(selector.MatchResources.MachineDeploymentClass.Names) > 0) ||
+		(selector.MatchResources.MachinePoolClass != nil && len(selector.MatchResources.MachinePoolClass.Names) > 0)) {
 		return append(allErrs,
 			field.Invalid(
 				path,
@@ -206,7 +207,7 @@ func validateSelectors(selector clusterv1.PatchSelector, class *clusterv1.Cluste
 
 	if selector.MatchResources.MachineDeploymentClass != nil && len(selector.MatchResources.MachineDeploymentClass.Names) > 0 {
 		for i, name := range selector.MatchResources.MachineDeploymentClass.Names {
-			match := false
+			// match := false
 			if strings.Contains(name, "*") {
 				// selector can at most have a single * rune
 				if strings.Count(name, "*") > 1 {
@@ -248,18 +249,18 @@ func validateSelectors(selector clusterv1.PatchSelector, class *clusterv1.Cluste
 				if matches {
 					if selectorMatchTemplate(selector, md.Template.Infrastructure.Ref) ||
 						selectorMatchTemplate(selector, md.Template.Bootstrap.Ref) {
-						match = true
+						// match = true
 						break
 					}
 				}
 			}
-			if !match {
-				allErrs = append(allErrs, field.Invalid(
-					path.Child("matchResources", "machineDeploymentClass", "names").Index(i),
-					name,
-					"selector is enabled but matches neither the bootstrap ref nor the infrastructure ref of a MachineDeployment class",
-				))
-			}
+			// if !match {
+			// 	allErrs = append(allErrs, field.Invalid(
+			// 		path.Child("matchResources", "machineDeploymentClass", "names").Index(i),
+			// 		name,
+			// 		"selector is enabled but matches neither the bootstrap ref nor the infrastructure ref of a MachineDeployment class",
+			// 	))
+			// }
 		}
 	}
 
@@ -458,6 +459,17 @@ var builtinVariables = sets.Set[string]{}.Insert(
 	// MachineDeployment ref builtins.
 	"builtin.machineDeployment.bootstrap.configRef.name",
 	"builtin.machineDeployment.infrastructureRef.name",
+
+	// MachinePool builtins.
+	"builtin.machinePool",
+	"builtin.machinePool.class",
+	"builtin.machinePool.name",
+	"builtin.machinePool.replicas",
+	"builtin.machinePool.topologyName",
+	"builtin.machinePool.version",
+	// MachinePool ref builtins.
+	"builtin.machinePool.bootstrap.configRef.name",
+	"builtin.machinePool.infrastructureRef.name",
 )
 
 // validateIndexAccess checks to see if the jsonPath is attempting to add an element in the array i.e. access by number

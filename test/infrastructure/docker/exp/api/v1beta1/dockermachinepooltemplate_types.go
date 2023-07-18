@@ -52,7 +52,7 @@ func init() {
 	SchemeBuilder.Register(&DockerMachinePoolTemplate{}, &DockerMachinePoolTemplateList{})
 }
 
-// DockerMachineTemplateResource describes the data needed to create a DockerMachine from a template.
+// DockerMachinePoolTemplateResource describes the data needed to create a DockerMachine from a template.
 type DockerMachinePoolTemplateResource struct {
 	// Standard object's metadata.
 	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata

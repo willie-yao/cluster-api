@@ -95,11 +95,9 @@ func (r *Reconciler) reconcileState(ctx context.Context, s *scope.Scope) error {
 	}
 
 	// Reconcile desired state of the MachinePool objects.
-	if err := r.reconcileMachinePools(ctx, s); err != nil {
-		return err
-	}
+	err := r.reconcileMachinePools(ctx, s)
 
-	return nil
+	return err
 }
 
 // Reconcile the Cluster shim, a temporary object used a mean to collect objects/templates

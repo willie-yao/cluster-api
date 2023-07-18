@@ -261,7 +261,7 @@ type MachinePoolClass struct {
 	// MachinePools objects representing a pool of worker nodes.
 	Template MachinePoolClassTemplate `json:"template"`
 
-	// FailureDomain is the failure domain the machines will be created in.
+	// FailureDomain is the failure domain the machine pools will be created in.
 	// Must match a key in the FailureDomain map stored on the cluster object.
 	// NOTE: This value can be overridden while defining a Cluster.Topology using this MachinePoolClass.
 	// +optional

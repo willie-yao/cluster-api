@@ -42,6 +42,7 @@ type requestItemBuilder struct {
 	holder   runtimehooksv1.HolderReference
 }
 
+// requestTopologyName is used to specify the topology name to match in a GeneratePatchesRequest.
 type requestTopologyName struct {
 	mdTopologyName string
 	mpTopologyName string

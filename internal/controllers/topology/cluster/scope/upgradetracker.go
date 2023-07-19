@@ -232,8 +232,6 @@ func (m *MachineDeploymentUpgradeTracker) DeferredUpgrade() bool {
 	return len(m.deferredNames) != 0
 }
 
-// TODO(richardcase) - this could probably be refactored to be more generic
-
 // MachinePoolUpgradeTracker holds the current upgrade status and makes upgrade
 // decisions for MachinePools.
 type MachinePoolUpgradeTracker struct {
@@ -277,7 +275,7 @@ func (m *MachinePoolUpgradeTracker) MarkRollingOut(names ...string) {
 	}
 }
 
-// RollingOutNames returns the list of machine deployments that are rolling out or
+// RollingOutNames returns the list of machine pools that are rolling out or
 // are about to roll out.
 func (m *MachinePoolUpgradeTracker) RollingOutNames() []string {
 	return sets.List(m.rollingOutNames)
@@ -288,8 +286,8 @@ func (m *MachinePoolUpgradeTracker) UpgradeConcurrencyReached() bool {
 	return m.rollingOutNames.Len() >= m.maxMachinePoolRollOutConcurrency
 }
 
-// MarkPendingCreate marks a machine deployment topology that is pending to be created.
-// This is generally used to capture machine deployments that are yet to be created
+// MarkPendingCreate marks a machine pool topology that is pending to be created.
+// This is generally used to capture machine pools that are yet to be created
 // because the control plane is not yet stable.
 func (m *MachinePoolUpgradeTracker) MarkPendingCreate(mdTopologyName string) {
 	m.pendingCreateTopologyNames.Insert(mdTopologyName)
@@ -300,20 +298,20 @@ func (m *MachinePoolUpgradeTracker) IsPendingCreate(mdTopologyName string) bool 
 	return m.pendingCreateTopologyNames.Has(mdTopologyName)
 }
 
-// IsAnyPendingCreate returns true if any of the machine deployments are pending
+// IsAnyPendingCreate returns true if any of the machine pools are pending
 // to be created. Returns false, otherwise.
 func (m *MachinePoolUpgradeTracker) IsAnyPendingCreate() bool {
 	return len(m.pendingCreateTopologyNames) != 0
 }
 
-// PendingCreateTopologyNames returns the list of machine deployment topology names that
+// PendingCreateTopologyNames returns the list of machine pool topology names that
 // are pending create.
 func (m *MachinePoolUpgradeTracker) PendingCreateTopologyNames() []string {
 	return sets.List(m.pendingCreateTopologyNames)
 }
 
-// MarkPendingUpgrade marks a machine deployment as in need of an upgrade.
-// This is generally used to capture machine deployments that have not yet
+// MarkPendingUpgrade marks a machine pool as in need of an upgrade.
+// This is generally used to capture machine pools that have not yet
 // picked up the topology version.
 func (m *MachinePoolUpgradeTracker) MarkPendingUpgrade(name string) {
 	m.pendingRollingOutNames.Insert(name)
@@ -324,13 +322,13 @@ func (m *MachinePoolUpgradeTracker) IsPendingUpgrade(name string) bool {
 	return m.pendingRollingOutNames.Has(name)
 }
 
-// IsAnyPendingUpgrade returns true if any of the machine deployments are pending
+// IsAnyPendingUpgrade returns true if any of the machine pools are pending
 // an upgrade. Returns false, otherwise.
 func (m *MachinePoolUpgradeTracker) IsAnyPendingUpgrade() bool {
 	return len(m.pendingRollingOutNames) != 0
 }
 
-// PendingUpgradeNames returns the list of machine deployment names that
+// PendingUpgradeNames returns the list of machine pool names that
 // are pending an upgrade.
 func (m *MachinePoolUpgradeTracker) PendingUpgradeNames() []string {
 	return sets.List(m.pendingRollingOutNames)

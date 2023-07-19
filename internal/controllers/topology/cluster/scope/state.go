@@ -128,18 +128,16 @@ func (md *MachineDeploymentState) IsUpgrading(ctx context.Context, c client.Clie
 	return false, nil
 }
 
-// -----------------
-
 // MachinePoolsStateMap holds a collection of MachinePool states.
 type MachinePoolsStateMap map[string]*MachinePoolState
 
 // RollingOut returns the list of the machine pools
 // that are rolling out.
-func (mds MachinePoolsStateMap) RollingOut() []string {
+func (mps MachinePoolsStateMap) RollingOut() []string {
 	names := []string{}
-	for _, md := range mds {
-		if md.IsRollingOut() {
-			names = append(names, md.Object.Name)
+	for _, mp := range mps {
+		if mp.IsRollingOut() {
+			names = append(names, mp.Object.Name)
 		}
 	}
 	return names
@@ -147,8 +145,8 @@ func (mds MachinePoolsStateMap) RollingOut() []string {
 
 // IsAnyRollingOut returns true if at least one of the
 // machine deployments is rolling out. False, otherwise.
-func (mds MachinePoolsStateMap) IsAnyRollingOut() bool {
-	return len(mds.RollingOut()) != 0
+func (mps MachinePoolsStateMap) IsAnyRollingOut() bool {
+	return len(mps.RollingOut()) != 0
 }
 
 // MachinePoolState holds all the objects representing the state of a managed pool.
@@ -166,8 +164,12 @@ type MachinePoolState struct {
 // IsRollingOut determines if the machine pool is upgrading.
 // A machine pool is considered upgrading if:
 // - if any of the replicas of the machine pool is not ready.
-func (md *MachinePoolState) IsRollingOut() bool {
-	// TODO(richardcase) - implement this
-	return true
-	//return !mdutil.DeploymentComplete(md.Object, &md.Object.Status) || *md.Object.Spec.Replicas != md.Object.Status.ReadyReplicas
+func (mp *MachinePoolState) IsRollingOut() bool {
+	return !rollOutComplete(mp.Object, &mp.Object.Status) || *mp.Object.Spec.Replicas != mp.Object.Status.ReadyReplicas
+}
+
+func rollOutComplete(mp *expv1.MachinePool, newStatus *expv1.MachinePoolStatus) bool {
+	return newStatus.Replicas == *(mp.Spec.Replicas) &&
+		newStatus.AvailableReplicas == *(mp.Spec.Replicas) &&
+		newStatus.ObservedGeneration >= mp.Generation
 }

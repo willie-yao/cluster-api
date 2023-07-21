@@ -39,6 +39,7 @@ import (
 	runtimehooksv1 "sigs.k8s.io/cluster-api/exp/runtime/hooks/api/v1alpha1"
 	"sigs.k8s.io/cluster-api/exp/runtime/topologymutation"
 	infrav1 "sigs.k8s.io/cluster-api/test/infrastructure/docker/api/v1beta1"
+	infraexpv1 "sigs.k8s.io/cluster-api/test/infrastructure/docker/exp/api/v1beta1"
 	"sigs.k8s.io/cluster-api/test/infrastructure/kind"
 	"sigs.k8s.io/cluster-api/util/version"
 )
@@ -113,6 +114,11 @@ func (h *ExtensionHandlers) GeneratePatches(ctx context.Context, req *runtimehoo
 			if err := patchDockerMachineTemplate(ctx, obj, variables); err != nil {
 				log.Error(err, "error patching DockerMachineTemplate")
 				return errors.Wrap(err, "error patching DockerMachineTemplate")
+			}
+		case *infraexpv1.DockerMachinePoolTemplate:
+			if err := patchDockerMachinePoolTemplate(ctx, obj, variables); err != nil {
+				log.Error(err, "error patching DockerMachinePoolTemplate")
+				return errors.Wrap(err, "error patching DockerMachinePoolTemplate")
 			}
 		}
 		return nil
@@ -351,6 +357,38 @@ func patchDockerMachineTemplate(ctx context.Context, dockerMachineTemplate *infr
 	// If the Docker Machine didn't have variables for either a control plane or a machineDeployment return an error.
 	// NOTE: this should never happen because it is enforced by the patch engine.
 	return errors.New("no version variables found for DockerMachineTemplate patch")
+}
+
+// patchDockerMachineTemplate patches the DockerMachinePoolTemplate.
+// It sets the CustomImage to an image for the version in use by the MachinePool.
+// NOTE: this patch is not required anymore after the introduction of the kind mapper in kind, however we keep it
+// as example of version aware patches.
+func patchDockerMachinePoolTemplate(ctx context.Context, dockerMachinePoolTemplate *infraexpv1.DockerMachinePoolTemplate, templateVariables map[string]apiextensionsv1.JSON) error {
+	log := ctrl.LoggerFrom(ctx)
+
+	// If the DockerMachinePoolTemplate belongs to a MachinePool, set the images the MachinePool version.
+	// NOTE: MachinePool version might be different than Cluster.version or other MachinePool's versions;
+	// the builtin variables provides the right version to use.
+	// NOTE: This works by checking the existence of a built in variable that exists only for templates liked to MachinePools.
+	mpVersion, found, err := topologymutation.GetStringVariable(templateVariables, "builtin.machinePool.version")
+	if err != nil {
+		return errors.Wrap(err, "could not set customImage to MachinePool DockerMachinePoolTemplate")
+	}
+	if found {
+		semVer, err := version.ParseMajorMinorPatchTolerant(mpVersion)
+		if err != nil {
+			return errors.Wrap(err, "could not parse MachinePool version")
+		}
+		kindMapping := kind.GetMapping(semVer, "")
+
+		log.Info(fmt.Sprintf("Setting MachinePool customImage to %q", kindMapping.Image))
+		dockerMachinePoolTemplate.Spec.Template.Spec.Template.CustomImage = kindMapping.Image
+		return nil
+	}
+
+	// If the Docker Machine didn't have variables for either a control plane or a machinePool return an error.
+	// NOTE: this should never happen because it is enforced by the patch engine.
+	return errors.New("no version variables found for DockerMachinePoolTemplate patch")
 }
 
 // ValidateTopology implements the HandlerFunc for the ValidateTopology hook.

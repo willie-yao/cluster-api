@@ -207,6 +207,7 @@ func validateSelectors(selector clusterv1.PatchSelector, class *clusterv1.Cluste
 
 	if selector.MatchResources.MachineDeploymentClass != nil && len(selector.MatchResources.MachineDeploymentClass.Names) > 0 {
 		for i, name := range selector.MatchResources.MachineDeploymentClass.Names {
+			match := false
 			if strings.Contains(name, "*") {
 				// selector can at most have a single * rune
 				if strings.Count(name, "*") > 1 {
@@ -248,9 +249,17 @@ func validateSelectors(selector clusterv1.PatchSelector, class *clusterv1.Cluste
 				if matches {
 					if selectorMatchTemplate(selector, md.Template.Infrastructure.Ref) ||
 						selectorMatchTemplate(selector, md.Template.Bootstrap.Ref) {
+						match = true
 						break
 					}
 				}
+			}
+			if !match {
+				allErrs = append(allErrs, field.Invalid(
+					path.Child("matchResources", "machineDeploymentClass", "names").Index(i),
+					name,
+					"selector is enabled but matches neither the bootstrap ref nor the infrastructure ref of a MachineDeployment class",
+				))
 			}
 		}
 	}

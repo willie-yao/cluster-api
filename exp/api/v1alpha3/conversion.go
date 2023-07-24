@@ -76,6 +76,7 @@ func (src *MachinePool) ConvertTo(dstRaw conversion.Hub) error {
 	}
 	dst.Spec.Template.Spec.NodeDeletionTimeout = restored.Spec.Template.Spec.NodeDeletionTimeout
 	dst.Spec.Template.Spec.NodeVolumeDetachTimeout = restored.Spec.Template.Spec.NodeVolumeDetachTimeout
+	dst.Spec.Selector = restored.Spec.Selector
 	return nil
 }
 

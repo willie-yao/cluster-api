@@ -734,10 +734,24 @@ func (r *Reconciler) reconcileMachinePools(ctx context.Context, s *scope.Scope) 
 	diff := calculateMachinePoolDiff(s.Current.MachinePools, s.Desired.MachinePools)
 
 	// Create MachinePools.
-	for _, mpTopologyName := range diff.toCreate {
-		mp := s.Desired.MachinePools[mpTopologyName]
-		if err := r.createMachinePool(ctx, s.Current.Cluster, mp); err != nil {
+	if len(diff.toCreate) > 0 {
+		currentMPTopologyNames, err := r.getCurrentMachinePools(ctx, s)
+		if err != nil {
 			return err
+		}
+		for _, mpTopologyName := range diff.toCreate {
+			mp := s.Desired.MachinePools[mpTopologyName]
+
+			// Skip the MP creation if the MP already exists.
+			if currentMPTopologyNames.Has(mpTopologyName) {
+				log := tlog.LoggerFrom(ctx).WithMachinePool(mp.Object)
+				log.V(3).Infof(fmt.Sprintf("Skipping creation of MachinePool %s because MachinePool for topology %s already exists (only considered creation because of stale cache)", tlog.KObj{Obj: mp.Object}, mpTopologyName))
+				continue
+			}
+
+			if err := r.createMachinePool(ctx, s.Current.Cluster, mp); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -759,6 +773,32 @@ func (r *Reconciler) reconcileMachinePools(ctx context.Context, s *scope.Scope) 
 	}
 
 	return nil
+}
+
+// getCurrentMachineDeployments gets the current list of MachinePools via the APIReader.
+func (r *Reconciler) getCurrentMachinePools(ctx context.Context, s *scope.Scope) (sets.Set[string], error) {
+	// TODO: We should consider using PartialObjectMetadataList here. Currently this doesn't work as our
+	// implementation for topology dryrun doesn't support PartialObjectMetadataList.
+	mpList := &expv1.MachinePoolList{}
+	err := r.APIReader.List(ctx, mpList,
+		client.MatchingLabels{
+			clusterv1.ClusterNameLabel:          s.Current.Cluster.Name,
+			clusterv1.ClusterTopologyOwnedLabel: "",
+		},
+		client.InNamespace(s.Current.Cluster.Namespace),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read MachinePools for managed topology")
+	}
+
+	currentMPs := sets.Set[string]{}
+	for _, mp := range mpList.Items {
+		mpTopologyName, ok := mp.ObjectMeta.Labels[clusterv1.ClusterTopologyMachinePoolNameLabel]
+		if ok || mpTopologyName != "" {
+			currentMPs.Insert(mpTopologyName)
+		}
+	}
+	return currentMPs, nil
 }
 
 // createMachinePool creates a MachinePool and the corresponding templates.

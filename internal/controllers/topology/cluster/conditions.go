@@ -160,7 +160,6 @@ func (r *Reconciler) reconcileTopologyReconciledCondition(s *scope.Scope, cluste
 				s.Blueprint.Topology.Version,
 			)
 			reason = clusterv1.TopologyReconciledMachinePoolsUpgradeDeferredReason
-
 		}
 
 		switch {

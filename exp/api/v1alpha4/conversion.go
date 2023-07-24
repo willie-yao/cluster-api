@@ -21,11 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
-	v1beta1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 )
 
-func Convert_v1beta1_MachinePoolSpec_To_v1alpha4_MachinePoolSpec(in *v1beta1.MachinePoolSpec, out *MachinePoolSpec, s apimachineryconversion.Scope) error {
+func Convert_v1beta1_MachinePoolSpec_To_v1alpha4_MachinePoolSpec(in *expv1.MachinePoolSpec, out *MachinePoolSpec, s apimachineryconversion.Scope) error {
 	return autoConvert_v1beta1_MachinePoolSpec_To_v1alpha4_MachinePoolSpec(in, out, s)
 }
 

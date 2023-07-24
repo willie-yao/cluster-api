@@ -745,7 +745,7 @@ func (r *Reconciler) reconcileMachinePools(ctx context.Context, s *scope.Scope) 
 	for _, mpTopologyName := range diff.toUpdate {
 		currentMP := s.Current.MachinePools[mpTopologyName]
 		desiredMP := s.Desired.MachinePools[mpTopologyName]
-		if err := r.updateMachinePool(ctx, s.Current.Cluster, mpTopologyName, currentMP, desiredMP); err != nil {
+		if err := r.updateMachinePool(ctx, s.Current.Cluster, currentMP, desiredMP); err != nil {
 			return err
 		}
 	}
@@ -796,7 +796,7 @@ func (r *Reconciler) createMachinePool(ctx context.Context, cluster *clusterv1.C
 }
 
 // updateMachinePool updates a MachinePool. Also rotates the corresponding Templates if necessary.
-func (r *Reconciler) updateMachinePool(ctx context.Context, cluster *clusterv1.Cluster, mpTopologyName string, currentMP, desiredMP *scope.MachinePoolState) error {
+func (r *Reconciler) updateMachinePool(ctx context.Context, cluster *clusterv1.Cluster, currentMP, desiredMP *scope.MachinePoolState) error {
 	log := tlog.LoggerFrom(ctx).WithMachinePool(desiredMP.Object)
 
 	infraCtx, _ := log.WithObject(desiredMP.InfrastructureMachinePoolObject).Into(ctx)

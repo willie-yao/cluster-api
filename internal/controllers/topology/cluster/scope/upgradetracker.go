@@ -120,6 +120,15 @@ func (m MaxMDUpgradeConcurrency) ApplyToUpgradeTracker(options *UpgradeTrackerOp
 	options.maxMDUpgradeConcurrency = int(m)
 }
 
+// MaxMPUpgradeConcurrency sets the upper limit for the number of Machine Pools that can upgrade
+// concurrently.
+type MaxMPUpgradeConcurrency int
+
+// ApplyToUpgradeTracker applies the given UpgradeTrackerOptions.
+func (m MaxMPUpgradeConcurrency) ApplyToUpgradeTracker(options *UpgradeTrackerOptions) {
+	options.maxMPUpgradeConcurrency = int(m)
+}
+
 // NewUpgradeTracker returns an upgrade tracker with empty tracking information.
 func NewUpgradeTracker(opts ...UpgradeTrackerOption) *UpgradeTracker {
 	options := &UpgradeTrackerOptions{}
@@ -129,6 +138,10 @@ func NewUpgradeTracker(opts ...UpgradeTrackerOption) *UpgradeTracker {
 	if options.maxMDUpgradeConcurrency < 1 {
 		// The concurrency should be at least 1.
 		options.maxMDUpgradeConcurrency = 1
+	}
+	if options.maxMPUpgradeConcurrency < 1 {
+		// The concurrency should be at least 1.
+		options.maxMPUpgradeConcurrency = 1
 	}
 	return &UpgradeTracker{
 		MachineDeployments: MachineDeploymentUpgradeTracker{
@@ -143,7 +156,7 @@ func NewUpgradeTracker(opts ...UpgradeTrackerOption) *UpgradeTracker {
 			pendingRollingOutNames:           sets.Set[string]{},
 			deferredNames:                    sets.Set[string]{},
 			rollingOutNames:                  sets.Set[string]{},
-			maxMachinePoolRollOutConcurrency: options.maxMDUpgradeConcurrency,
+			maxMachinePoolRollOutConcurrency: options.maxMPUpgradeConcurrency,
 		},
 	}
 }

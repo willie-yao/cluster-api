@@ -425,13 +425,13 @@ func getMDClassName(cluster *clusterv1.Cluster, mdTopologyName string) (bool, st
 }
 
 // getMPClassName retrieves the MPClass name by looking up the MPTopology in the Cluster.
-func getMPClassName(cluster *clusterv1.Cluster, mdTopologyName string) (bool, string) {
+func getMPClassName(cluster *clusterv1.Cluster, mpTopologyName string) (bool, string) {
 	if cluster.Spec.Topology.Workers == nil {
 		return false, ""
 	}
 
 	for _, mdTopology := range cluster.Spec.Topology.Workers.MachineDeployments {
-		if mdTopology.Name == mdTopologyName {
+		if mdTopology.Name == mpTopologyName {
 			return true, mdTopology.Class
 		}
 	}

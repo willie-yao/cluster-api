@@ -767,10 +767,10 @@ func (r *Reconciler) reconcileMachinePools(ctx context.Context, s *scope.Scope) 
 func (r *Reconciler) createMachinePool(ctx context.Context, cluster *clusterv1.Cluster, mp *scope.MachinePoolState) error {
 	log := tlog.LoggerFrom(ctx).WithMachinePool(mp.Object)
 
-	infraCtx, _ := log.WithObject(mp.InfrastructureMachineTemplate).Into(ctx)
+	infraCtx, _ := log.WithObject(mp.InfrastructureMachinePoolObject).Into(ctx)
 	if err := r.reconcileReferencedObject(infraCtx, reconcileReferencedObjectInput{
 		cluster: cluster,
-		desired: mp.InfrastructureMachineTemplate,
+		desired: mp.InfrastructureMachinePoolObject,
 	}); err != nil {
 		return errors.Wrapf(err, "failed to create %s", mp.Object.Kind)
 	}
@@ -801,11 +801,11 @@ func (r *Reconciler) createMachinePool(ctx context.Context, cluster *clusterv1.C
 func (r *Reconciler) updateMachinePool(ctx context.Context, cluster *clusterv1.Cluster, mpTopologyName string, currentMP, desiredMP *scope.MachinePoolState) error {
 	log := tlog.LoggerFrom(ctx).WithMachinePool(desiredMP.Object)
 
-	infraCtx, _ := log.WithObject(desiredMP.InfrastructureMachineTemplate).Into(ctx)
+	infraCtx, _ := log.WithObject(desiredMP.InfrastructureMachinePoolObject).Into(ctx)
 	if err := r.reconcileReferencedObject(infraCtx, reconcileReferencedObjectInput{
 		cluster:       cluster,
-		current:       currentMP.InfrastructureMachineTemplate,
-		desired:       desiredMP.InfrastructureMachineTemplate,
+		current:       currentMP.InfrastructureMachinePoolObject,
+		desired:       desiredMP.InfrastructureMachinePoolObject,
 		versionGetter: contract.ControlPlane().Version().Get,
 	}); err != nil {
 		return errors.Wrapf(err, "failed to reconcile %s", tlog.KObj{Obj: currentMP.Object})

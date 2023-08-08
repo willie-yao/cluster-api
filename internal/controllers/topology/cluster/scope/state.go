@@ -159,8 +159,8 @@ type MachinePoolState struct {
 	// BootstrapObject holds the MachinePool bootstrap object.
 	BootstrapObject *unstructured.Unstructured
 
-	// InfrastructureMachineTemplate holds the infrastructure machine template referenced by the MachinePool object.
-	InfrastructureMachineTemplate *unstructured.Unstructured
+	// InfrastructureMachinePoolObject holds the infrastructure machine template referenced by the MachinePool object.
+	InfrastructureMachinePoolObject *unstructured.Unstructured
 }
 
 // IsRollingOut determines if the machine pool is upgrading.

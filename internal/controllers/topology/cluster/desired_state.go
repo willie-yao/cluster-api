@@ -938,7 +938,7 @@ func computeMachinePool(_ context.Context, s *scope.Scope, desiredControlPlaneSt
 		currentObjectRef:      currentBootstrapTemplateRef,
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compute bootstrap template for topology %q", machinePoolTopology.Name)
+		return nil, errors.Wrapf(err, "failed to compute bootstrap object for topology %q", machinePoolTopology.Name)
 	}
 
 	bootstrapTemplateLabels := desiredMachinePool.BootstrapObject.GetLabels()
@@ -951,10 +951,10 @@ func computeMachinePool(_ context.Context, s *scope.Scope, desiredControlPlaneSt
 
 	// Compute the Infrastructure template.
 	var currentInfraMachineTemplateRef *corev1.ObjectReference
-	if currentMachinePool != nil && currentMachinePool.InfrastructureMachineTemplate != nil {
+	if currentMachinePool != nil && currentMachinePool.InfrastructureMachinePoolObject != nil {
 		currentInfraMachineTemplateRef = &currentMachinePool.Object.Spec.Template.Spec.InfrastructureRef
 	}
-	desiredMachinePool.InfrastructureMachineTemplate, err = templateToObject(templateToInput{
+	desiredMachinePool.InfrastructureMachinePoolObject, err = templateToObject(templateToInput{
 		template:              machinePoolBlueprint.InfrastructureMachineTemplate,
 		templateClonedFromRef: contract.ObjToRef(machinePoolBlueprint.InfrastructureMachineTemplate),
 		cluster:               s.Current.Cluster,
@@ -962,45 +962,45 @@ func computeMachinePool(_ context.Context, s *scope.Scope, desiredControlPlaneSt
 		currentObjectRef:      currentInfraMachineTemplateRef,
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compute infrastructure template for topology %q", machinePoolTopology.Name)
+		return nil, errors.Wrapf(err, "failed to compute infrastructure object for topology %q", machinePoolTopology.Name)
 	}
 
-	infraMachineTemplateLabels := desiredMachinePool.InfrastructureMachineTemplate.GetLabels()
-	if infraMachineTemplateLabels == nil {
-		infraMachineTemplateLabels = map[string]string{}
+	infraMachinePoolObjectLabels := desiredMachinePool.InfrastructureMachinePoolObject.GetLabels()
+	if infraMachinePoolObjectLabels == nil {
+		infraMachinePoolObjectLabels = map[string]string{}
 	}
-	// Add ClusterTopologyMachinePoolLabel to the generated InfrastructureMachine template
-	infraMachineTemplateLabels[clusterv1.ClusterTopologyMachinePoolNameLabel] = machinePoolTopology.Name
-	desiredMachinePool.InfrastructureMachineTemplate.SetLabels(infraMachineTemplateLabels)
+	// Add ClusterTopologyMachinePoolLabel to the generated InfrastructureMachinePool object
+	infraMachinePoolObjectLabels[clusterv1.ClusterTopologyMachinePoolNameLabel] = machinePoolTopology.Name
+	desiredMachinePool.InfrastructureMachinePoolObject.SetLabels(infraMachinePoolObjectLabels)
 	version := computeMachinePoolVersion(s, desiredControlPlaneState, machinePoolTopology, currentMachinePool)
 
 	// Compute values that can be set both in the MachinePoolClass and in the MachinePoolTopology
-	// failureDomains := machinePoolClass.FailureDomains
-	// if machinePoolTopology.FailureDomains != nil {
-	// 	failureDomains = machinePoolTopology.FailureDomains
-	// }
+	failureDomain := machinePoolClass.FailureDomain
+	if machinePoolTopology.FailureDomain != nil {
+		failureDomain = machinePoolTopology.FailureDomain
+	}
 
-	// nodeDrainTimeout := machineDeploymentClass.NodeDrainTimeout
-	// if machineDeploymentTopology.NodeDrainTimeout != nil {
-	// 	nodeDrainTimeout = machineDeploymentTopology.NodeDrainTimeout
-	// }
+	nodeDrainTimeout := machinePoolClass.NodeDrainTimeout
+	if machinePoolTopology.NodeDrainTimeout != nil {
+		nodeDrainTimeout = machinePoolTopology.NodeDrainTimeout
+	}
 
-	// nodeVolumeDetachTimeout := machineDeploymentClass.NodeVolumeDetachTimeout
-	// if machineDeploymentTopology.NodeVolumeDetachTimeout != nil {
-	// 	nodeVolumeDetachTimeout = machineDeploymentTopology.NodeVolumeDetachTimeout
-	// }
+	nodeVolumeDetachTimeout := machinePoolClass.NodeVolumeDetachTimeout
+	if machinePoolTopology.NodeVolumeDetachTimeout != nil {
+		nodeVolumeDetachTimeout = machinePoolTopology.NodeVolumeDetachTimeout
+	}
 
-	// nodeDeletionTimeout := machineDeploymentClass.NodeDeletionTimeout
-	// if machineDeploymentTopology.NodeDeletionTimeout != nil {
-	// 	nodeDeletionTimeout = machineDeploymentTopology.NodeDeletionTimeout
-	// }
+	nodeDeletionTimeout := machinePoolClass.NodeDeletionTimeout
+	if machinePoolTopology.NodeDeletionTimeout != nil {
+		nodeDeletionTimeout = machinePoolTopology.NodeDeletionTimeout
+	}
 
 	// Compute the MachinePool object.
 	desiredBootstrapTemplateRef, err := calculateRefDesiredAPIVersion(currentBootstrapTemplateRef, desiredMachinePool.BootstrapObject)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to calculate desired bootstrap template ref")
 	}
-	desiredInfraMachineTemplateRef, err := calculateRefDesiredAPIVersion(currentInfraMachineTemplateRef, desiredMachinePool.InfrastructureMachineTemplate)
+	desiredInfraMachineTemplateRef, err := calculateRefDesiredAPIVersion(currentInfraMachineTemplateRef, desiredMachinePool.InfrastructureMachinePoolObject)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to calculate desired infrastructure machine template ref")
 	}
@@ -1019,14 +1019,14 @@ func computeMachinePool(_ context.Context, s *scope.Scope, desiredControlPlaneSt
 			//Replicas: ,
 			Template: clusterv1.MachineTemplateSpec{
 				Spec: clusterv1.MachineSpec{
-					ClusterName:       s.Current.Cluster.Name,
-					Version:           pointer.String(version),
-					Bootstrap:         clusterv1.Bootstrap{ConfigRef: desiredBootstrapTemplateRef},
-					InfrastructureRef: *desiredInfraMachineTemplateRef,
-					//FailureDomain:           failureDomain,
-					//NodeDrainTimeout:        nodeDrainTimeout,
-					//NodeVolumeDetachTimeout: nodeVolumeDetachTimeout,
-					//NodeDeletionTimeout:     nodeDeletionTimeout,
+					ClusterName:             s.Current.Cluster.Name,
+					Version:                 pointer.String(version),
+					Bootstrap:               clusterv1.Bootstrap{ConfigRef: desiredBootstrapTemplateRef},
+					InfrastructureRef:       *desiredInfraMachineTemplateRef,
+					FailureDomain:           failureDomain,
+					NodeDrainTimeout:        nodeDrainTimeout,
+					NodeVolumeDetachTimeout: nodeVolumeDetachTimeout,
+					NodeDeletionTimeout:     nodeDeletionTimeout,
 				},
 			},
 		},

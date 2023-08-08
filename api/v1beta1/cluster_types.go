@@ -263,10 +263,10 @@ type MachinePoolTopology struct {
 	// the values are hashed together.
 	Name string `json:"name"`
 
-	// FailureDomains is the list of failure domains the machine pool will be created in.
-	// Must match a key in the FailureDomains map stored on the cluster object.
+	// FailureDomain is the failure domain the machine pools will be created in.
+	// Must match a key in the FailureDomain map stored on the cluster object.
 	// +optional
-	FailureDomains []string `json:"failureDomains,omitempty"`
+	FailureDomain *string `json:"failureDomain,omitempty"`
 
 	// NodeDrainTimeout is the total amount of time that the controller will spend on draining a node.
 	// The default value is 0, meaning that the node can be drained without any time limitations.

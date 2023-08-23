@@ -32,8 +32,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/component-base/featuregate"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	crwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -203,6 +205,7 @@ func (t *topologyClient) Plan(ctx context.Context, in *TopologyPlanInput) (*Topo
 		Client:                    dryRunClient,
 		APIReader:                 dryRunClient,
 		UnstructuredCachingClient: dryRunClient,
+		Tracker:                   &fakeClusterCache{},
 	}
 	reconciler.SetupForDryRun(&noOpRecorder{})
 	request := reconcile.Request{NamespacedName: *targetCluster}
@@ -846,4 +849,10 @@ func hasUniqueVersionPerGroupKind(objs []*unstructured.Unstructured) bool {
 		versionMap[gk] = gvk.Version
 	}
 	return true
+}
+
+type fakeClusterCache struct{}
+
+func (f *fakeClusterCache) GetClient(_ context.Context, _ client.ObjectKey) (client.Client, error) {
+	return fake.NewClientBuilder().WithScheme(clientgoscheme.Scheme).Build(), nil
 }

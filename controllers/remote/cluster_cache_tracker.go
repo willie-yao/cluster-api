@@ -64,6 +64,11 @@ const (
 // if the cluster is already locked by another concurrent call.
 var ErrClusterLocked = errors.New("cluster is locked already")
 
+// ClusterCache is a interface for managing client caches for workload clusters.
+type ClusterCache interface {
+	GetClient(ctx context.Context, cluster client.ObjectKey) (client.Client, error)
+}
+
 // ClusterCacheTracker manages client caches for workload clusters.
 type ClusterCacheTracker struct {
 	log                   logr.Logger

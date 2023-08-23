@@ -75,6 +75,7 @@ func TestMain(m *testing.M) {
 			Client:                    mgr.GetClient(),
 			APIReader:                 mgr.GetAPIReader(),
 			UnstructuredCachingClient: unstructuredCachingClient,
+			Tracker:                   &envtestClusterCache{mgr.GetClient()},
 		}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: 5}); err != nil {
 			panic(fmt.Sprintf("unable to create topology cluster reconciler: %v", err))
 		}
@@ -95,4 +96,12 @@ func TestMain(m *testing.M) {
 		SetupReconcilers: setupReconcilers,
 		MinK8sVersion:    "v1.22.0", // ClusterClass uses server side apply that went GA in 1.22; we do not support previous version because of bug/inconsistent behaviours in the older release.
 	}))
+}
+
+type envtestClusterCache struct {
+	c client.Client
+}
+
+func (e *envtestClusterCache) GetClient(_ context.Context, _ client.ObjectKey) (client.Client, error) {
+	return e.c, nil
 }

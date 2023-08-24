@@ -1554,7 +1554,7 @@ func schema_sigsk8sio_cluster_api_api_v1beta1_MachineDeploymentClass(ref common.
 					},
 					"failureDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailureDomain is the failure domain the machines will be created in. Must match a key in the FailureDomains map stored on the cluster object. NOTE: This value can be overridden while defining a Cluster.Topology using this MachineDeploymentClass.",
+							Description: "FailureDomain is the failure domain the machines will be created in. Must match a key in the FailureDomain map stored on the cluster object. NOTE: This value can be overridden while defining a Cluster.Topology using this MachineDeploymentClass.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -2442,19 +2442,11 @@ func schema_sigsk8sio_cluster_api_api_v1beta1_MachinePoolClass(ref common.Refere
 							Ref:         ref("sigs.k8s.io/cluster-api/api/v1beta1.MachinePoolClassTemplate"),
 						},
 					},
-					"failureDomains": {
+					"failureDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailureDomains is the list of failure domains the MachinePool should be attached to. Must match a key in the FailureDomains map stored on the cluster object. NOTE: This value can be overridden while defining a Cluster.Topology using this MachinePoolClass.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
+							Description: "FailureDomain is the failure domain the machines will be created in. Must match a key in the FailureDomain map stored on the cluster object. NOTE: This value can be overridden while defining a Cluster.Topology using this MachinePoolClass.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"nodeDrainTimeout": {
@@ -2558,19 +2550,11 @@ func schema_sigsk8sio_cluster_api_api_v1beta1_MachinePoolTopology(ref common.Ref
 							Format:      "",
 						},
 					},
-					"failureDomains": {
+					"failureDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "FailureDomains is the list of failure domains the machine pool will be created in. Must match a key in the FailureDomains map stored on the cluster object.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
+							Description: "FailureDomain is the failure domain the machine pools will be created in. Must match a key in the FailureDomain map stored on the cluster object.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"nodeDrainTimeout": {

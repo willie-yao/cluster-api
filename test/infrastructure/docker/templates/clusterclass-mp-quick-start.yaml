@@ -19,7 +19,7 @@ spec:
       kind: DockerClusterTemplate
       name: quick-start-cluster
   workers:
-    machineDeployments:
+    machinePools:
     - class: default-worker
       template:
         bootstrap:
@@ -30,8 +30,8 @@ spec:
         infrastructure:
           ref:
             apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-            kind: DockerMachineTemplate
-            name: quick-start-default-worker-machinetemplate
+            kind: DockerMachinePoolTemplate
+            name: quick-start-default-worker-machinepooltemplate
   variables:
   - name: imageRepository
     required: true
@@ -124,13 +124,13 @@ spec:
           template: |
             imageTag: {{ .coreDNSImageTag }}
   - name: customImage
-    description: "Sets the container image that is used for running dockerMachines for the controlPlane and default-worker machineDeployments."
+    description: "Sets the container image that is used for running dockerMachines for the controlPlane and default-worker machinePools."
     definitions:
     - selector:
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-        kind: DockerMachineTemplate
+        kind: DockerMachinePoolMachineTemplate
         matchResources:
-          machineDeploymentClass:
+          machinePoolClass:
             names:
             - default-worker
       jsonPatches:
@@ -138,7 +138,7 @@ spec:
         path: "/spec/template/spec/customImage"
         valueFrom:
           template: |
-            kindest/node:{{ .builtin.machineDeployment.version | replace "+" "_" }}
+            kindest/node:{{ .builtin.machinePool.version | replace "+" "_" }}
     - selector:
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: DockerMachineTemplate
@@ -222,7 +222,9 @@ spec:
         initConfiguration:
           nodeRegistration: {} # node registration parameters are automatically injected by CAPD according to the kindest/node image in use.
         joinConfiguration:
-          nodeRegistration: {} # node registration parameters are automatically injected by CAPD according to the kindest/node image in use.
+          nodeRegistration:
+            kubeletExtraArgs:
+              eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: DockerMachineTemplate
@@ -236,15 +238,12 @@ spec:
         hostPath: "/var/run/docker.sock"
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
-kind: DockerMachineTemplate
+kind: DockerMachinePoolTemplate
 metadata:
-  name: quick-start-default-worker-machinetemplate
+  name: quick-start-default-worker-machinepooltemplate
 spec:
   template:
-    spec:
-      extraMounts:
-      - containerPath: "/var/run/docker.sock"
-        hostPath: "/var/run/docker.sock"
+    spec: {}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
@@ -254,4 +253,6 @@ spec:
   template:
     spec:
       joinConfiguration:
-        nodeRegistration: {} # node registration parameters are automatically injected by CAPD according to the kindest/node image in use.
+        nodeRegistration:
+          kubeletExtraArgs:
+            eviction-hard: nodefs.available<0%,nodefs.inodesFree<0%,imagefs.available<0%

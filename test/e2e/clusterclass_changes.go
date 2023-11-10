@@ -507,19 +507,19 @@ func modifyMachinePoolViaClusterClassAndWait(ctx context.Context, input modifyMa
 			log.Logf("Waiting for MachinePool rollout for MachinePoolTopology %q (class %q) to complete.", mpTopology.Name, mpTopology.Class)
 			Eventually(func(g Gomega) error {
 				// Get MachinePool for the current MachinePoolTopology.
-				mdList := &expv1.MachinePoolList{}
-				g.Expect(mgmtClient.List(ctx, mdList, client.InNamespace(input.Cluster.Namespace), client.MatchingLabels{
+				mpList := &expv1.MachinePoolList{}
+				g.Expect(mgmtClient.List(ctx, mpList, client.InNamespace(input.Cluster.Namespace), client.MatchingLabels{
 					clusterv1.ClusterTopologyMachinePoolNameLabel: mpTopology.Name,
 				})).To(Succeed())
-				g.Expect(mdList.Items).To(HaveLen(1), fmt.Sprintf("expected one MachinePool for topology %q, but got %d", mpTopology.Name, len(mdList.Items)))
-				md := mdList.Items[0]
+				g.Expect(mpList.Items).To(HaveLen(1), fmt.Sprintf("expected one MachinePool for topology %q, but got %d", mpTopology.Name, len(mpList.Items)))
+				mp := mpList.Items[0]
 
 				// Verify that the fields from Cluster topology are set on the MachinePool.
-				assertMachinePoolTopologyFields(g, md, mpTopology)
+				assertMachinePoolTopologyFields(g, mp, mpTopology)
 
 				if mpClass.Template.Bootstrap.Ref != nil {
 					// Get the corresponding BootstrapConfigTemplate.
-					bootstrapConfigTemplateRef := md.Spec.Template.Spec.Bootstrap.ConfigRef
+					bootstrapConfigTemplateRef := mp.Spec.Template.Spec.Bootstrap.ConfigRef
 					bootstrapConfigTemplate, err := external.Get(ctx, mgmtClient, bootstrapConfigTemplateRef, input.Cluster.Namespace)
 					g.Expect(err).ToNot(HaveOccurred())
 
@@ -533,7 +533,7 @@ func modifyMachinePoolViaClusterClassAndWait(ctx context.Context, input modifyMa
 				}
 
 				// Get the corresponding InfrastructureMachinePoolTemplate.
-				infrastructureMachinePoolTemplateRef := md.Spec.Template.Spec.InfrastructureRef
+				infrastructureMachinePoolTemplateRef := mp.Spec.Template.Spec.InfrastructureRef
 				infrastructureMachinePoolTemplate, err := external.Get(ctx, mgmtClient, &infrastructureMachinePoolTemplateRef, input.Cluster.Namespace)
 				g.Expect(err).ToNot(HaveOccurred())
 
@@ -617,7 +617,7 @@ func assertMachinePoolTopologyFields(g Gomega, mp expv1.MachinePool, mpTopology 
 		g.Expect(mp.Spec.MinReadySeconds).To(Equal(mpTopology.MinReadySeconds))
 	}
 
-	if mpTopology.FailureDomains != nil {
+	if mpTopology.FailureDomains != nil && mp.Spec.Template.Spec.FailureDomain != nil {
 		g.Expect(mpTopology.FailureDomains).To(ContainElement(mp.Spec.Template.Spec.FailureDomain))
 	}
 }

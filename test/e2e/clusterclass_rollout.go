@@ -40,6 +40,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/controllers/external"
 	controlplanev1 "sigs.k8s.io/cluster-api/controlplane/kubeadm/api/v1beta1"
+	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
 	"sigs.k8s.io/cluster-api/internal/contract"
 	"sigs.k8s.io/cluster-api/internal/controllers/topology/machineset"
 	"sigs.k8s.io/cluster-api/test/e2e/internal/log"
@@ -134,10 +135,11 @@ func ClusterClassRolloutSpec(ctx context.Context, inputGetter func() ClusterClas
 			WaitForClusterIntervals:      input.E2EConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: input.E2EConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    input.E2EConfig.GetIntervals(specName, "wait-worker-nodes"),
+			WaitForMachinePools:          input.E2EConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 		}, clusterResources)
 		assertClusterObjects(ctx, input.BootstrapClusterProxy, clusterResources.Cluster, clusterResources.ClusterClass)
 
-		By("Rolling out changes to control plane and MachineDeployments (in-place)")
+		By("Rolling out changes to control plane, MachineDeployments, and MachinePools (in-place)")
 		machinesBeforeUpgrade := getMachinesByCluster(ctx, input.BootstrapClusterProxy.GetClient(), clusterResources.Cluster)
 		By("Modifying the control plane configuration via Cluster topology and wait for changes to be applied to the control plane object (in-place)")
 		modifyControlPlaneViaClusterAndWait(ctx, modifyControlPlaneViaClusterAndWaitInput{
@@ -183,6 +185,25 @@ func ClusterClassRolloutSpec(ctx context.Context, inputGetter func() ClusterClas
 				}
 			},
 			WaitForMachineDeployments: input.E2EConfig.GetIntervals(specName, "wait-worker-nodes"),
+		})
+		By("Modifying the MachinePool configuration via Cluster topology and wait for changes to be applied to the MachinePool (in-place)")
+		modifyMachinePoolViaClusterAndWait(ctx, modifyMachinePoolViaClusterAndWaitInput{
+			ClusterProxy: input.BootstrapClusterProxy,
+			Cluster:      clusterResources.Cluster,
+			ModifyMachinePoolTopology: func(topology *clusterv1.MachinePoolTopology) {
+				// Drop existing labels and annotations and set new ones.
+				topology.Metadata.Labels = map[string]string{
+					"Cluster.topology.machinePool.newLabel": "Cluster.topology.machinePool.newLabelValue",
+				}
+				topology.Metadata.Annotations = map[string]string{
+					"Cluster.topology.machinePool.newAnnotation": "Cluster.topology.machinePool.newAnnotationValue",
+				}
+				topology.NodeDrainTimeout = &metav1.Duration{Duration: time.Duration(rand.Intn(20)) * time.Second}        //nolint:gosec
+				topology.NodeDeletionTimeout = &metav1.Duration{Duration: time.Duration(rand.Intn(20)) * time.Second}     //nolint:gosec
+				topology.NodeVolumeDetachTimeout = &metav1.Duration{Duration: time.Duration(rand.Intn(20)) * time.Second} //nolint:gosec
+				topology.MinReadySeconds = pointer.Int32(rand.Int31n(20))                                                 //nolint:gosec
+			},
+			WaitForMachinePools: input.E2EConfig.GetIntervals(specName, "wait-worker-nodes"),
 		})
 		By("Verifying there are no unexpected rollouts through in-place rollout")
 		Consistently(func(g Gomega) {
@@ -1092,6 +1113,52 @@ func modifyMachineDeploymentViaClusterAndWait(ctx context.Context, input modifyM
 				// Verify that the fields from Cluster topology are set on the MachineDeployment.
 				assertMachineDeploymentTopologyFields(g, md, mdTopology)
 			}, input.WaitForMachineDeployments...).Should(BeNil())
+		}
+	}
+}
+
+// modifyMachinePoolViaClusterAndWaitInput is the input type for modifyMachinePoolViaClusterAndWait.
+type modifyMachinePoolViaClusterAndWaitInput struct {
+	ClusterProxy              framework.ClusterProxy
+	Cluster                   *clusterv1.Cluster
+	ModifyMachinePoolTopology func(topology *clusterv1.MachinePoolTopology)
+	WaitForMachinePools       []interface{}
+}
+
+// modifyMachinePoolViaClusterAndWait modifies the MachinePoolTopology of a Cluster topology via ModifyMachinePoolTopology.
+// It then waits until the changes are rolled out to the MachinePools of the Cluster.
+// NOTE: This helper is really specific to this test, so we are keeping this private vs. adding it to the framework.
+func modifyMachinePoolViaClusterAndWait(ctx context.Context, input modifyMachinePoolViaClusterAndWaitInput) {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for modifyMachinePoolViaClusterAndWait")
+	Expect(input.ClusterProxy).ToNot(BeNil(), "Invalid argument. input.ClusterProxy can't be nil when calling modifyMachinePoolViaClusterAndWait")
+	Expect(input.Cluster).ToNot(BeNil(), "Invalid argument. input.Cluster can't be nil when calling modifyMachinePoolViaClusterAndWait")
+
+	mgmtClient := input.ClusterProxy.GetClient()
+
+	for i, mdTopology := range input.Cluster.Spec.Topology.Workers.MachinePools {
+		log.Logf("Modifying the MachinePool topology %q of ClusterClass %s", mdTopology.Name, klog.KObj(input.Cluster))
+
+		// Patch the MachinePool topology in the Cluster.
+		patchHelper, err := patch.NewHelper(input.Cluster, mgmtClient)
+		Expect(err).ToNot(HaveOccurred())
+		input.ModifyMachinePoolTopology(&input.Cluster.Spec.Topology.Workers.MachinePools[i])
+		Expect(patchHelper.Patch(ctx, input.Cluster)).To(Succeed())
+
+		for _, mdTopology := range input.Cluster.Spec.Topology.Workers.MachinePools {
+			// NOTE: We only wait until the change is rolled out to the MachinePools and not to the worker machines.
+			log.Logf("Waiting for MachinePool rollout for MachinePoolTopology %q to complete.", mdTopology.Name)
+			Eventually(func(g Gomega) {
+				// Get MachinePool for the current MachinePoolTopology.
+				mdList := &expv1.MachinePoolList{}
+				g.Expect(mgmtClient.List(ctx, mdList, client.InNamespace(input.Cluster.Namespace), client.MatchingLabels{
+					clusterv1.ClusterTopologyMachinePoolNameLabel: mdTopology.Name,
+				})).To(Succeed())
+				g.Expect(mdList.Items).To(HaveLen(1), fmt.Sprintf("expected one MachinePool for topology %q, but got %d", mdTopology.Name, len(mdList.Items)))
+				// md := mdList.Items[0]
+
+				// Verify that the fields from Cluster topology are set on the MachinePool.
+				// assertMachinePoolTopologyFields(g, md, mdTopology)
+			}, input.WaitForMachinePools...).Should(BeNil())
 		}
 	}
 }

@@ -518,14 +518,16 @@ func modifyMachinePoolViaClusterClassAndWait(ctx context.Context, input modifyMa
 				assertMachinePoolTopologyFields(g, mp, mpTopology)
 
 				if mpClass.Template.Bootstrap.Ref != nil {
-					// Get the corresponding BootstrapConfigTemplate.
-					bootstrapConfigTemplateRef := mp.Spec.Template.Spec.Bootstrap.ConfigRef
-					bootstrapConfigTemplate, err := external.Get(ctx, mgmtClient, bootstrapConfigTemplateRef, input.Cluster.Namespace)
+					// Get the corresponding BootstrapConfig object.
+					bootstrapConfigObjectRef := mp.Spec.Template.Spec.Bootstrap.ConfigRef
+					bootstrapConfigObject, err := external.Get(ctx, mgmtClient, bootstrapConfigObjectRef, input.Cluster.Namespace)
 					g.Expect(err).ToNot(HaveOccurred())
 
-					// Verify that ModifyBootstrapConfigTemplateFields have been set.
+					// Verify that ModifyBootstrapConfigTemplateFields have been set and propagates to the BootstrapConfig.
 					for fieldPath, expectedValue := range input.ModifyBootstrapConfigTemplateFields {
-						currentValue, ok, err := unstructured.NestedFieldNoCopy(bootstrapConfigTemplate.Object, strings.Split(fieldPath, ".")...)
+						// MachinePools have a BootstrapConfig, not a BootstrapConfigTemplate, so we need to convert the fieldPath so it can find it on the object.
+						fieldPath = strings.TrimPrefix(fieldPath, "spec.template.")
+						currentValue, ok, err := unstructured.NestedFieldNoCopy(bootstrapConfigObject.Object, strings.Split(fieldPath, ".")...)
 						g.Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("failed to get field %q", fieldPath))
 						g.Expect(ok).To(BeTrue(), fmt.Sprintf("failed to get field %q", fieldPath))
 						g.Expect(currentValue).To(Equal(expectedValue), fmt.Sprintf("field %q should be equal", fieldPath))

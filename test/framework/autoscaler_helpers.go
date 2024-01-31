@@ -353,6 +353,54 @@ func EnableAutoscalerForMachineDeploymentTopologyAndWait(ctx context.Context, in
 	}, input.WaitForAnnotationsToBeAdded...).Should(Succeed(), "Auto scaler annotations are missing from the MachineDeployments")
 }
 
+type EnableAutoscalerForMachinePoolTopologyAndWaitInput struct {
+	ClusterProxy                ClusterProxy
+	Cluster                     *clusterv1.Cluster
+	NodeGroupMinSize            string
+	NodeGroupMaxSize            string
+	WaitForAnnotationsToBeAdded []interface{}
+}
+
+func EnableAutoscalerForMachinePoolTopologyAndWait(ctx context.Context, input EnableAutoscalerForMachinePoolTopologyAndWaitInput) {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for EnableAutoscalerForMachinePoolTopologyAndWait")
+	Expect(input.ClusterProxy).ToNot(BeNil(), "Invalid argument. input.ClusterProxy can't be nil when calling EnableAutoscalerForMachinePoolTopologyAndWait")
+
+	mgmtClient := input.ClusterProxy.GetClient()
+
+	log.Logf("Add the %s and %s annotations to the MachinePools in ClusterTopology", clusterv1.AutoscalerMinSizeAnnotation, clusterv1.AutoscalerMaxSizeAnnotation)
+	patchHelper, err := patch.NewHelper(input.Cluster, mgmtClient)
+	Expect(err).ToNot(HaveOccurred())
+	for i := range input.Cluster.Spec.Topology.Workers.MachinePools {
+		mp := input.Cluster.Spec.Topology.Workers.MachinePools[i]
+		if mp.Metadata.Annotations == nil {
+			mp.Metadata.Annotations = map[string]string{}
+		}
+		// Add the autoscaler annotation
+		mp.Metadata.Annotations[clusterv1.AutoscalerMinSizeAnnotation] = input.NodeGroupMinSize
+		mp.Metadata.Annotations[clusterv1.AutoscalerMaxSizeAnnotation] = input.NodeGroupMaxSize
+		// Drop the replicas from MachinePoolTopology, or else the topology controller and autoscaler with fight over control.
+		mp.Replicas = nil
+		input.Cluster.Spec.Topology.Workers.MachinePools[i] = mp
+	}
+	Eventually(func(g Gomega) {
+		g.Expect(patchHelper.Patch(ctx, input.Cluster)).Should(Succeed())
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to patch Cluster topology to add autoscaler annotations")
+
+	log.Logf("Wait for the annotations to applied on the MachinePools")
+	Eventually(func(g Gomega) {
+		mpList := GetMachinePoolsByCluster(ctx, GetMachinePoolsByClusterInput{
+			Lister:      mgmtClient,
+			ClusterName: input.Cluster.Name,
+			Namespace:   input.Cluster.Namespace,
+		})
+		for i := range mpList {
+			mp := mpList[i]
+			g.Expect(mp.Annotations).To(HaveKey(clusterv1.AutoscalerMinSizeAnnotation), fmt.Sprintf("MachinePool %s should have %s annotation", klog.KObj(mp), clusterv1.AutoscalerMinSizeAnnotation))
+			g.Expect(mp.Annotations).To(HaveKey(clusterv1.AutoscalerMaxSizeAnnotation), fmt.Sprintf("MachinePool %s should have %s annotation", klog.KObj(mp), clusterv1.AutoscalerMaxSizeAnnotation))
+		}
+	}, input.WaitForAnnotationsToBeAdded...).Should(Succeed(), "Auto scaler annotations are missing from the MachinePools")
+}
+
 // getAuthenticationTokenForAutoscaler returns a bearer authenticationToken with minimal RBAC permissions that will be used
 // by the autoscaler running on the workload cluster to access the management cluster.
 func getAuthenticationTokenForAutoscaler(ctx context.Context, managementClusterProxy ClusterProxy, namespace string, cluster string, infraMachineTemplateKind string) string {

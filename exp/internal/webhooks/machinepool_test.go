@@ -26,6 +26,7 @@ import (
 	utilfeature "k8s.io/component-base/featuregate/testing"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
@@ -33,7 +34,7 @@ import (
 	"sigs.k8s.io/cluster-api/internal/webhooks/util"
 )
 
-var ctx = ctrl.SetupSignalHandler()
+var ctx = admission.NewContextWithRequest(ctrl.SetupSignalHandler(), admission.Request{})
 
 func TestMachinePoolDefault(t *testing.T) {
 	// NOTE: MachinePool feature flag is disabled by default, thus preventing to create or update MachinePool.

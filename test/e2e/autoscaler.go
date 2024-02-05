@@ -127,6 +127,7 @@ func AutoscalerSpec(ctx context.Context, inputGetter func() AutoscalerSpecInput)
 			WaitForClusterIntervals:      input.E2EConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: input.E2EConfig.GetIntervals(specName, "wait-control-plane"),
 			WaitForMachineDeployments:    input.E2EConfig.GetIntervals(specName, "wait-worker-nodes"),
+			WaitForMachinePools:          input.E2EConfig.GetIntervals(specName, "wait-machine-pool-nodes"),
 		}, clusterResources)
 
 		Expect(clusterResources.Cluster.Spec.Topology).NotTo(BeNil(), "Autoscaler test expected a Classy Cluster")
@@ -138,10 +139,19 @@ func AutoscalerSpec(ctx context.Context, inputGetter func() AutoscalerSpecInput)
 		nodeGroupMaxSize, ok := mdTopology.Metadata.Annotations[clusterv1.AutoscalerMaxSizeAnnotation]
 		Expect(ok).To(BeTrue(), "MachineDeploymentTopology %s does not have the %q autoscaler annotation", mdTopology.Name, clusterv1.AutoscalerMaxSizeAnnotation)
 
+		mpTopology := clusterResources.Cluster.Spec.Topology.Workers.MachinePools[0]
+		Expect(mdTopology.Metadata.Annotations).NotTo(BeNil(), "MachinePool is expected to have autoscaler annotations")
+		mpNodeGroupMinSize, ok := mpTopology.Metadata.Annotations[clusterv1.AutoscalerMinSizeAnnotation]
+		Expect(ok).To(BeTrue(), "MachinePoolTopology %s does not have the %q autoscaler annotation", mdTopology.Name, clusterv1.AutoscalerMinSizeAnnotation)
+		// mpNodeGroupMaxSize, ok := mpTopology.Metadata.Annotations[clusterv1.AutoscalerMaxSizeAnnotation]
+		// Expect(ok).To(BeTrue(), "MachinePoolTopology %s does not have the %q autoscaler annotation", mdTopology.Name, clusterv1.AutoscalerMaxSizeAnnotation)
+
 		// Get a ClusterProxy so we can interact with the workload cluster
 		workloadClusterProxy := input.BootstrapClusterProxy.GetWorkloadCluster(ctx, clusterResources.Cluster.Namespace, clusterResources.Cluster.Name)
 		originalReplicas := *clusterResources.MachineDeployments[0].Spec.Replicas
 		Expect(strconv.Itoa(int(originalReplicas))).To(Equal(nodeGroupMinSize), "MachineDeployment should have replicas as defined in %s", clusterv1.AutoscalerMinSizeAnnotation)
+		mpOriginalReplicas := *clusterResources.MachinePools[0].Spec.Replicas
+		Expect(strconv.Itoa(int(mpOriginalReplicas))).To(Equal(mpNodeGroupMinSize), "MachinePool should have replicas as defined in %s", clusterv1.AutoscalerMinSizeAnnotation)
 
 		By("Installing the autoscaler on the workload cluster")
 		autoscalerWorkloadYAMLPath := input.E2EConfig.GetVariable(AutoscalerWorkloadYAMLPath)
@@ -167,6 +177,15 @@ func AutoscalerSpec(ctx context.Context, inputGetter func() AutoscalerSpecInput)
 			MachineDeployment:        clusterResources.MachineDeployments[0],
 			Replicas:                 scaledUpReplicas,
 			WaitForMachineDeployment: input.E2EConfig.GetIntervals(specName, "wait-autoscaler"),
+		})
+
+		By("Checking the MachinePool is scaled up")
+		mpScaledUpReplicas := mpOriginalReplicas + 1
+		framework.AssertMachinePoolReplicas(ctx, framework.AssertMachinePoolReplicasInput{
+			Getter:             input.BootstrapClusterProxy.GetClient(),
+			MachinePool:        clusterResources.MachinePools[0],
+			Replicas:           mpScaledUpReplicas,
+			WaitForMachinePool: input.E2EConfig.GetIntervals(specName, "wait-autoscaler"),
 		})
 
 		By("Disabling the autoscaler")

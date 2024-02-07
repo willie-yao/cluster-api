@@ -250,7 +250,7 @@ func ProcessYAML(input *ProcessYAMLInput) ([]byte, error) {
 	return out, nil
 }
 
-type DisableAutoscalerForMachineDeploymentTopologyAndWaitInput struct {
+type DisableAutoscalerForTopologyAndWaitInput struct {
 	ClusterProxy                  ClusterProxy
 	Cluster                       *clusterv1.Cluster
 	WaitForAnnotationsToBeDropped []interface{}
@@ -259,7 +259,7 @@ type DisableAutoscalerForMachineDeploymentTopologyAndWaitInput struct {
 // DisableAutoscalerForMachineDeploymentTopologyAndWait drop the autoscaler annotations from the MachineDeploymentTopology
 // and waits till the annotations are dropped from the underlying MachineDeployment. It also verifies that the replicas
 // fields of the MachineDeployments are not affected after the annotations are dropped.
-func DisableAutoscalerForMachineDeploymentTopologyAndWait(ctx context.Context, input DisableAutoscalerForMachineDeploymentTopologyAndWaitInput) {
+func DisableAutoscalerForMachineDeploymentTopologyAndWait(ctx context.Context, input DisableAutoscalerForTopologyAndWaitInput) {
 	Expect(ctx).NotTo(BeNil(), "ctx is required for DisableAutoscalerForMachineDeploymentTopologyAndWait")
 	Expect(input.ClusterProxy).ToNot(BeNil(), "Invalid argument. input.ClusterProxy can't be nil when calling DisableAutoscalerForMachineDeploymentTopologyAndWait")
 
@@ -304,6 +304,56 @@ func DisableAutoscalerForMachineDeploymentTopologyAndWait(ctx context.Context, i
 			g.Expect(md.Spec.Replicas).To(Equal(replicas[md.Name]), fmt.Sprintf("MachineDeployment %s replicas should not change after disabling autoscaler", klog.KObj(md)))
 		}
 	}, input.WaitForAnnotationsToBeDropped...).Should(Succeed(), "Auto scaler annotations are not dropped or replicas changed for the MachineDeployments")
+}
+
+// DisableAutoscalerForMachinePoolTopologyAndWait drop the autoscaler annotations from the MachinePoolTopology
+// and waits till the annotations are dropped from the underlying MachinePool. It also verifies that the replicas
+// fields of the MachinePools are not affected after the annotations are dropped.
+func DisableAutoscalerForMachinePoolTopologyAndWait(ctx context.Context, input DisableAutoscalerForTopologyAndWaitInput) {
+	Expect(ctx).NotTo(BeNil(), "ctx is required for DisableAutoscalerForMachinePoolTopologyAndWait")
+	Expect(input.ClusterProxy).ToNot(BeNil(), "Invalid argument. input.ClusterProxy can't be nil when calling DisableAutoscalerForMachinePoolTopologyAndWait")
+
+	mgmtClient := input.ClusterProxy.GetClient()
+
+	// Get the current replicas of the MachinePools.
+	replicas := map[string]*int32{}
+	mpList := GetMachinePoolsByCluster(ctx, GetMachinePoolsByClusterInput{
+		Lister:      mgmtClient,
+		ClusterName: input.Cluster.Name,
+		Namespace:   input.Cluster.Namespace,
+	})
+	for _, mp := range mpList {
+		replicas[mp.Name] = mp.Spec.Replicas
+	}
+
+	log.Logf("Dropping the %s and %s annotations from the MachinePools in ClusterTopology", clusterv1.AutoscalerMinSizeAnnotation, clusterv1.AutoscalerMaxSizeAnnotation)
+	patchHelper, err := patch.NewHelper(input.Cluster, mgmtClient)
+	Expect(err).ToNot(HaveOccurred())
+	for i := range input.Cluster.Spec.Topology.Workers.MachinePools {
+		mp := input.Cluster.Spec.Topology.Workers.MachinePools[i]
+		delete(mp.Metadata.Annotations, clusterv1.AutoscalerMinSizeAnnotation)
+		delete(mp.Metadata.Annotations, clusterv1.AutoscalerMaxSizeAnnotation)
+		input.Cluster.Spec.Topology.Workers.MachinePools[i] = mp
+	}
+	Eventually(func(g Gomega) {
+		g.Expect(patchHelper.Patch(ctx, input.Cluster)).Should(Succeed())
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to patch Cluster topology to drop autoscaler annotations")
+
+	log.Logf("Wait for the annotations to be dropped from the MachinePools")
+	Eventually(func(g Gomega) {
+		mpList := GetMachinePoolsByCluster(ctx, GetMachinePoolsByClusterInput{
+			Lister:      mgmtClient,
+			ClusterName: input.Cluster.Name,
+			Namespace:   input.Cluster.Namespace,
+		})
+		for i := range mpList {
+			mp := mpList[i]
+			g.Expect(mp.Annotations).ToNot(HaveKey(clusterv1.AutoscalerMinSizeAnnotation), fmt.Sprintf("MachinePool %s should not have %s annotation", klog.KObj(mp), clusterv1.AutoscalerMinSizeAnnotation))
+			g.Expect(mp.Annotations).ToNot(HaveKey(clusterv1.AutoscalerMaxSizeAnnotation), fmt.Sprintf("MachinePool %s should not have %s annotation", klog.KObj(mp), clusterv1.AutoscalerMaxSizeAnnotation))
+			// Verify that disabling auto scaler does not change the current MachinePool replicas.
+			g.Expect(mp.Spec.Replicas).To(Equal(replicas[mp.Name]), fmt.Sprintf("MachinePool %s replicas should not change after disabling autoscaler", klog.KObj(mp)))
+		}
+	}, input.WaitForAnnotationsToBeDropped...).Should(Succeed(), "Auto scaler annotations are not dropped or replicas changed for the MachinePools")
 }
 
 type EnableAutoscalerForMachineDeploymentTopologyAndWaitInput struct {

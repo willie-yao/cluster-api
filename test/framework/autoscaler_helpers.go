@@ -101,6 +101,7 @@ func ApplyAutoscalerToWorkloadCluster(ctx context.Context, input ApplyAutoscaler
 			"MANAGEMENT_CLUSTER_ADDRESS": serverAddr,
 			"MANAGEMENT_CLUSTER_CA":      base64.StdEncoding.EncodeToString(mgtClusterCA),
 			"AUTOSCALER_VERSION":         input.AutoscalerVersion,
+			"EXP_MACHINE_POOL":           "true",
 		},
 	})
 	Expect(err).ToNot(HaveOccurred(), "failed to parse %s", workloadYamlTemplate)

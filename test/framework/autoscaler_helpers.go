@@ -133,7 +133,8 @@ func ApplyAutoscalerToWorkloadCluster(ctx context.Context, input ApplyAutoscaler
 
 // AddScaleUpDeploymentAndWaitInput is the input for AddScaleUpDeploymentAndWait.
 type AddScaleUpDeploymentAndWaitInput struct {
-	ClusterProxy ClusterProxy
+	ClusterProxy   ClusterProxy
+	DeploymentName string
 }
 
 // AddScaleUpDeploymentAndWait create a deployment that will trigger the autoscaler to scale up and create a new machine.
@@ -167,23 +168,23 @@ func AddScaleUpDeploymentAndWait(ctx context.Context, input AddScaleUpDeployment
 
 	scaleUpDeployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "scale-up",
+			Name:      input.DeploymentName,
 			Namespace: metav1.NamespaceDefault,
 			Labels: map[string]string{
-				"app": "scale-up",
+				"app": input.DeploymentName,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptr.To[int32](int32(replicas)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "scale-up",
+					"app": input.DeploymentName,
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": "scale-up",
+						"app": input.DeploymentName,
 					},
 				},
 				Spec: corev1.PodSpec{

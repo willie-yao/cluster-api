@@ -165,9 +165,14 @@ func AutoscalerSpec(ctx context.Context, inputGetter func() AutoscalerSpecInput)
 			AutoscalerVersion:                 input.AutoscalerVersion,
 		}, input.E2EConfig.GetIntervals(specName, "wait-controllers")...)
 
-		By("Creating workload that forces the system to scale up")
+		By("Creating two workload that forces the system to scale up mp and md")
 		framework.AddScaleUpDeploymentAndWait(ctx, framework.AddScaleUpDeploymentAndWaitInput{
-			ClusterProxy: workloadClusterProxy,
+			ClusterProxy:   workloadClusterProxy,
+			DeploymentName: "scale-up-deployment-1",
+		}, input.E2EConfig.GetIntervals(specName, "wait-autoscaler")...)
+		framework.AddScaleUpDeploymentAndWait(ctx, framework.AddScaleUpDeploymentAndWaitInput{
+			ClusterProxy:   workloadClusterProxy,
+			DeploymentName: "scale-up-deployment-2",
 		}, input.E2EConfig.GetIntervals(specName, "wait-autoscaler")...)
 
 		By("Checking the MachineDeployment is scaled up")

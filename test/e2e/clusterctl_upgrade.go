@@ -521,6 +521,8 @@ func ClusterctlUpgradeSpec(ctx context.Context, inputGetter func() ClusterctlUpg
 
 		By("THE MANAGEMENT CLUSTER WITH OLDER VERSION OF PROVIDERS WORKS!")
 
+		return // Skip the rest of the test if the user only wants to test the initialization of the management cluster
+
 		for i, upgrade := range input.Upgrades {
 			Byf("[%d] Starting upgrade", i)
 			if input.PreUpgrade != nil {

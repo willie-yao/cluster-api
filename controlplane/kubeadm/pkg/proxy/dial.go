@@ -37,11 +37,9 @@ const defaultTimeout = 10 * time.Second
 
 // Dialer creates connections using Kubernetes API Server port-forwarding.
 type Dialer struct {
-	proxy          Proxy
-	clientset      *kubernetes.Clientset
-	proxyTransport http.RoundTripper
-	upgrader       spdy.Upgrader
-	timeout        time.Duration
+	proxy     Proxy
+	clientset *kubernetes.Clientset
+	timeout   time.Duration
 }
 
 // NewDialer creates a new dialer for a given API server scope.
@@ -69,12 +67,6 @@ func NewDialer(p Proxy, options ...func(*Dialer) error) (*Dialer, error) {
 	if err != nil {
 		return nil, err
 	}
-	proxyTransport, upgrader, err := spdy.RoundTripperFor(p.KubeConfig)
-	if err != nil {
-		return nil, err
-	}
-	dialer.proxyTransport = proxyTransport
-	dialer.upgrader = upgrader
 	dialer.clientset = clientset
 	return dialer, nil
 }
@@ -93,6 +85,11 @@ func (d *Dialer) DialContext(ctx context.Context, _ string, addr string) (net.Co
 	default:
 	}
 
+	proxyTransport, upgrader, err := spdy.RoundTripperFor(d.proxy.KubeConfig)
+	if err != nil {
+		return nil, pkgerrors.Wrap(err, "error creating SPDY round tripper")
+	}
+
 	req := d.clientset.CoreV1().RESTClient().
 		Post().
 		Resource(d.proxy.Kind).
@@ -101,14 +98,14 @@ func (d *Dialer) DialContext(ctx context.Context, _ string, addr string) (net.Co
 		SubResource("portforward")
 
 	httpClient := &http.Client{
-		Transport: d.proxyTransport,
+		Transport: proxyTransport,
 	}
 
 	if deadline, ok := ctx.Deadline(); ok {
 		httpClient.Timeout = time.Until(deadline)
 	}
 
-	dialer := spdy.NewDialer(d.upgrader, httpClient, "POST", req.URL())
+	dialer := spdy.NewDialer(upgrader, httpClient, "POST", req.URL())
 
 	// Configure websocket dialer and keep spdy as fallback
 	// Note: websockets are enabled per default starting with kubernetes 1.31.
